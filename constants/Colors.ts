@@ -82,40 +82,40 @@ export default {
   },
 
   dark: {
-    text:               '#F0EBE2',
-    textSecondary:      '#9A9087',
-    textMuted:          '#6A6058',
-    background:         '#1A1815',   // warm near-black
-    backgroundElevated: '#252220',
-    backgroundDim:      '#1E1C19',
-    tint:               '#5AADA7',
-    tabIconDefault:     '#7A7068',
-    tabIconSelected:    '#5AADA7',
-    accent:             '#C88590',
-    border:             '#3A3530',
+    text:               '#E8EDE8',   // sage-white
+    textSecondary:      '#7A9088',   // muted sage
+    textMuted:          '#4A5A52',
+    background:         '#0C1410',   // deep forest dark
+    backgroundElevated: '#141C17',
+    backgroundDim:      '#101810',
+    tint:               '#7DC4BE',   // moonlit teal
+    tabIconDefault:     '#3E5850',
+    tabIconSelected:    '#7DC4BE',
+    accent:             '#C49096',   // soft rose
+    border:             'rgba(125,196,190,0.14)',
 
-    sage:               '#7A9B7D',
-    sageDark:           '#9DBD9F',
-    sageMuted:          '#587A5C',
-    sageMist:           '#1E2E1F',
+    sage:               '#8BA882',
+    sageDark:           '#A8C4A0',
+    sageMuted:          '#4A6050',
+    sageMist:           '#141C16',
 
-    cream:              '#1A1815',
-    beige:              '#252220',
-    wash:               '#201E1B',
+    cream:              '#0C1410',
+    beige:              '#141C17',
+    wash:               '#111814',
 
-    blueMist:           '#1E2E2D',
-    blueWash:           '#263634',
-    blueSoft:           '#5AADA7',
-    blueDeep:           '#5AADA7',
+    blueMist:           '#141C1A',
+    blueWash:           '#1A2822',
+    blueSoft:           '#7DC4BE',
+    blueDeep:           '#7DC4BE',
 
-    gold:               '#C8A870',
-    goldLight:          '#3A3020',
+    gold:               '#C4A86A',   // candlelight gold
+    goldLight:          '#2A2010',
 
-    rose:               '#C88590',
-    roseMist:           '#2E1E20',
+    rose:               '#C49096',
+    roseMist:           '#1E1216',
 
-    zenCard:            '#1E2E2D',
-    zenFocus:           '#5AADA7',
+    zenCard:            '#141C1A',
+    zenFocus:           '#7DC4BE',
   },
 } as const;
 

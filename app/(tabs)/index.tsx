@@ -17,12 +17,10 @@ import { AestheticClock } from '@/components/AestheticClock';
 import { EditNameModal } from '@/components/EditNameModal';
 import { FadeOnFocus } from '@/components/FadeOnFocus';
 import { NameIntroModal } from '@/components/NameIntroModal';
-import { RemoteImage } from '@/components/RemoteImage';
 import { SoftButton } from '@/components/SoftButton';
 import { Toast } from '@/components/Toast';
 import { ZenBreathLine } from '@/components/ZenBreathLine';
 import Colors from '@/constants/Colors';
-import { ARTWORK } from '@/constants/artwork';
 import { motion, radius, shadow, spacing, tabBarFloatPad } from '@/constants/theme';
 import { fonts } from '@/constants/typography';
 import { QUOTES } from '@/data/quotes';
@@ -39,6 +37,25 @@ import { useColorScheme } from '@/components/useColorScheme';
 
 type NamePhase = 'load' | 'ask' | 'ready';
 
+type AmbientPeriod = {
+  colors: readonly [string, string, string];
+  accent: string;
+};
+
+function getAmbient(hour: number): AmbientPeriod {
+  if (hour >= 5 && hour < 8)
+    return { colors: ['#1A0E08', '#2C1808', '#1A1008'] as const, accent: '#7A3818' };
+  if (hour >= 8 && hour < 12)
+    return { colors: ['#091A12', '#0E2418', '#0A1C14'] as const, accent: '#1A6644' };
+  if (hour >= 12 && hour < 16)
+    return { colors: ['#091A18', '#0E2820', '#0A1C18'] as const, accent: '#186A58' };
+  if (hour >= 16 && hour < 19)
+    return { colors: ['#1A1008', '#2A1C08', '#1C1208'] as const, accent: '#7A5018' };
+  if (hour >= 19 && hour < 22)
+    return { colors: ['#120810', '#1E0C18', '#100810'] as const, accent: '#5A2840' };
+  return   { colors: ['#060E0C', '#0A1612', '#070F0D'] as const, accent: '#0C3028' };
+}
+
 export default function TodayScreen() {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
@@ -50,7 +67,11 @@ export default function TodayScreen() {
   const [offset, setOffset] = useState(0);
   const quoteOpacity = useRef(new Animated.Value(1)).current;
   const savePulse = useRef(new Animated.Value(1)).current;
-  const heroScale = useRef(new Animated.Value(1)).current;
+
+  // Floating ambient orb animations
+  const orb1Y = useRef(new Animated.Value(0)).current;
+  const orb2Y = useRef(new Animated.Value(0)).current;
+  const orb3Y = useRef(new Animated.Value(0)).current;
 
   const [namePhase, setNamePhase] = useState<NamePhase>('load');
   const [userName, setUserName] = useState('');
@@ -63,9 +84,30 @@ export default function TodayScreen() {
     [tick, offset]
   );
 
+  const hour = tick.getHours();
+  const ambient = useMemo(() => getAmbient(hour), [hour]);
+
   useEffect(() => {
     const id = setInterval(() => setTick(new Date()), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Floating orb animations — slow, gentle drift
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(orb1Y, { toValue: -22, duration: 9000, useNativeDriver: true }),
+      Animated.timing(orb1Y, { toValue: 0,   duration: 9000, useNativeDriver: true }),
+    ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.delay(2800),
+      Animated.timing(orb2Y, { toValue: -16, duration: 11000, useNativeDriver: true }),
+      Animated.timing(orb2Y, { toValue: 0,   duration: 11000, useNativeDriver: true }),
+    ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.delay(5200),
+      Animated.timing(orb3Y, { toValue: -18, duration: 8000, useNativeDriver: true }),
+      Animated.timing(orb3Y, { toValue: 0,   duration: 8000, useNativeDriver: true }),
+    ])).start();
   }, []);
 
   useEffect(() => {
@@ -89,7 +131,7 @@ export default function TodayScreen() {
   const pulseSave = useCallback(() => {
     Animated.sequence([
       Animated.timing(savePulse, { toValue: 1.14, duration: 110, useNativeDriver: true }),
-      Animated.timing(savePulse, { toValue: 1, duration: 190, useNativeDriver: true }),
+      Animated.timing(savePulse, { toValue: 1,    duration: 190, useNativeDriver: true }),
     ]).start();
   }, [savePulse]);
 
@@ -108,17 +150,16 @@ export default function TodayScreen() {
 
   const fav = ready && isQuoteFavorite(quote.id);
 
-  // Gradient for the main bg
   const bgGradient =
     scheme === 'dark'
-      ? (['#1A1815', '#1E1C19', '#252220'] as const)
+      ? (['#0C1410', '#101810', '#0E1612'] as const)
       : (['#EDE5D8', '#F0EBE0', '#F5EFE4'] as const);
 
-  // Hero image overlay gradient (bottom fade)
+  // Hero fade: transitions from the always-dark hero into the app background
   const heroFade =
     scheme === 'dark'
-      ? (['transparent', 'rgba(26,24,21,0.5)', 'rgba(26,24,21,0.95)', '#1A1815'] as const)
-      : (['transparent', 'rgba(237,229,216,0.35)', 'rgba(237,229,216,0.85)', '#EDE5D8'] as const);
+      ? (['transparent', 'rgba(12,20,16,0.4)', 'rgba(12,20,16,0.94)', '#0C1410'] as const)
+      : (['transparent', 'rgba(0,0,0,0.18)',   'rgba(0,0,0,0.62)',    '#1A1008'] as const);
 
   if (namePhase === 'load') {
     return (
@@ -153,18 +194,26 @@ export default function TodayScreen() {
           ]}
           showsVerticalScrollIndicator={false}>
 
-          {/* ── CINEMATIC HERO ───────────────────────────────── */}
-          <View style={[styles.hero, { marginTop: 0 }]}>
-            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: heroScale }] }]}>
-              <RemoteImage
-                uri={ARTWORK.todayHero}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                transition={400}
-              />
-            </Animated.View>
+          {/* ── AMBIENT HERO ─────────────────────────────────── */}
+          <View style={styles.hero}>
+            {/* Time-of-day gradient — always dark, changes with hour */}
+            <LinearGradient colors={ambient.colors} style={StyleSheet.absoluteFill} />
 
-            {/* Top bar: brand + favorite */}
+            {/* Floating ambient orbs */}
+            <Animated.View
+              style={[styles.ambientOrb1, { backgroundColor: ambient.accent, transform: [{ translateY: orb1Y }] }]}
+              pointerEvents="none"
+            />
+            <Animated.View
+              style={[styles.ambientOrb2, { backgroundColor: ambient.accent, transform: [{ translateY: orb2Y }] }]}
+              pointerEvents="none"
+            />
+            <Animated.View
+              style={[styles.ambientOrb3, { backgroundColor: ambient.accent, transform: [{ translateY: orb3Y }] }]}
+              pointerEvents="none"
+            />
+
+            {/* Top bar */}
             <View style={[styles.heroTopBar, { paddingTop: insets.top + spacing.md }]}>
               <View style={styles.brandBadge}>
                 <Text style={styles.brandBadgeText}>QUIET GARDEN</Text>
@@ -182,26 +231,22 @@ export default function TodayScreen() {
               </Link>
             </View>
 
-            {/* Centered time display */}
+            {/* Centered clock */}
             <View style={styles.heroCenter}>
               <AestheticClock heroMode />
             </View>
 
-            {/* Bottom gradient + greeting */}
-            <LinearGradient colors={[...heroFade]} locations={[0, 0.45, 0.78, 1]} style={styles.heroFade}>
-              <Text style={[styles.heroDate, { color: scheme === 'dark' ? 'rgba(240,235,226,0.65)' : 'rgba(38,33,28,0.55)' }]}>
-                {formatDateId(tick).toUpperCase()}
-              </Text>
-              <Text style={[styles.heroGreeting, { color: scheme === 'dark' ? '#F0EBE2' : c.text }]}>
-                {getPersonalGreeting(tick, userName)}
-              </Text>
+            {/* Bottom fade + greeting */}
+            <LinearGradient colors={[...heroFade]} locations={[0, 0.42, 0.78, 1]} style={styles.heroFade}>
+              <Text style={styles.heroDate}>{formatDateId(tick).toUpperCase()}</Text>
+              <Text style={styles.heroGreeting}>{getPersonalGreeting(tick, userName)}</Text>
               {namePhase === 'ready' && (
                 <Pressable
                   onPress={() => setEditNameOpen(true)}
                   accessibilityRole="button"
                   style={({ pressed }) => [styles.nameEditRow, { opacity: pressed ? 0.6 : 1 }]}>
-                  <FontAwesome name="pencil" size={12} color={c.zenFocus} />
-                  <Text style={[styles.nameEditText, { color: c.zenFocus }]}>
+                  <FontAwesome name="pencil" size={11} color="rgba(125,196,190,0.9)" />
+                  <Text style={styles.nameEditText}>
                     {userName.trim() ? 'Ubah nama' : 'Tambah nama'}
                   </Text>
                 </Pressable>
@@ -209,14 +254,14 @@ export default function TodayScreen() {
             </LinearGradient>
           </View>
 
-          {/* ── BREATH LINE ───────────────────────────────────── */}
+          {/* ── BREATH LINE ─────────────────────────────────── */}
           <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
             <ZenBreathLine />
           </View>
 
-          {/* ── WELCOME BANNER (jika baru) ────────────────────── */}
+          {/* ── WELCOME BANNER ──────────────────────────────── */}
           {welcome === false && namePhase === 'ready' && (
-            <View style={[styles.welcomeBanner, { backgroundColor: c.zenCard, borderColor: c.zenFocus }]}>
+            <View style={[styles.welcomeBanner, { backgroundColor: c.zenCard, borderColor: c.border }]}>
               <Text style={[styles.welcomeText, { color: c.textSecondary }]}>
                 Aku Quietelle — teman harianmu yang pelan. Tanpa akun, cukup napas dan tulisan.
               </Text>
@@ -228,34 +273,23 @@ export default function TodayScreen() {
             </View>
           )}
 
-          {/* ── QUOTE CARD ────────────────────────────────────── */}
+          {/* ── QUOTE CARD ──────────────────────────────────── */}
           <View style={{ paddingHorizontal: spacing.md }}>
-            <View
-              style={[
-                styles.quoteCard,
-                { backgroundColor: c.backgroundElevated },
-                shadow.zen,
-              ]}>
-              {/* Gradient accent top bar */}
+            <View style={[styles.quoteCard, { backgroundColor: c.backgroundElevated }, shadow.zen]}>
               <LinearGradient
-                colors={scheme === 'dark' ? ['#2A6460', '#3E8A84'] : ['#2A6460', '#5AADA7']}
+                colors={['#7DC4BE', '#2A6460']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.quoteAccentBar}
               />
-
-              {/* Big decorative quote mark */}
               <Text style={[styles.bigQuoteMark, { color: c.zenFocus }]}>{'"'}</Text>
-
               <Text style={[styles.quoteEyebrow, { color: c.zenFocus }]}>KUTIPAN HARI INI</Text>
-
               <Animated.View style={{ opacity: quoteOpacity }}>
                 <Text style={[styles.quoteText, { color: c.text }]}>{quote.text}</Text>
                 <View style={[styles.categoryChip, { backgroundColor: c.blueMist }]}>
                   <Text style={[styles.categoryChipText, { color: c.zenFocus }]}>{quote.category}</Text>
                 </View>
               </Animated.View>
-
               <View style={styles.quoteActions}>
                 <SoftButton
                   label={fav ? 'Tersimpan' : 'Simpan'}
@@ -274,7 +308,6 @@ export default function TodayScreen() {
                   onPress={() => router.push('/journal?reflect=1')}
                 />
               </View>
-
               <Pressable
                 onPress={() => crossfadeQuote(() => setOffset((o) => o + 1))}
                 accessibilityRole="button"
@@ -287,7 +320,7 @@ export default function TodayScreen() {
             </View>
           </View>
 
-          {/* ── QUICK ACTIONS ──────────────────────────────────── */}
+          {/* ── QUICK ACTIONS ───────────────────────────────── */}
           <View style={[styles.quickRow, { paddingHorizontal: spacing.md }]}>
             <Pressable
               onPress={() => router.push('/journal')}
@@ -299,7 +332,7 @@ export default function TodayScreen() {
                 shadow.card,
               ]}>
               <LinearGradient
-                colors={scheme === 'dark' ? ['#2A6460', '#1E2E2D'] : ['#2A6460', '#3E8A84']}
+                colors={['#2A6460', '#7DC4BE']}
                 style={styles.quickIconBg}>
                 <FontAwesome name="pencil" size={16} color="#fff" />
               </LinearGradient>
@@ -311,7 +344,7 @@ export default function TodayScreen() {
             </Pressable>
 
             <Pressable
-              onPress={() => router.push('/calm')}
+              onPress={() => router.push('/calm' as any)}
               accessibilityRole="button"
               accessibilityLabel="Masuk ke mode tenang"
               style={({ pressed }) => [
@@ -320,7 +353,7 @@ export default function TodayScreen() {
                 shadow.card,
               ]}>
               <LinearGradient
-                colors={scheme === 'dark' ? ['#3E5942', '#1E2E1F'] : ['#5D7A62', '#7A9B7D']}
+                colors={['#4A6050', '#8BA882']}
                 style={styles.quickIconBg}>
                 <FontAwesome name="headphones" size={16} color="#fff" />
               </LinearGradient>
@@ -352,11 +385,7 @@ const styles = StyleSheet.create({
   scroll: {},
 
   // ── Hero
-  hero: {
-    height: HERO_H,
-    overflow: 'hidden',
-    position: 'relative',
-  },
+  hero: { height: HERO_H, overflow: 'hidden', position: 'relative' },
   heroTopBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -365,12 +394,12 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   brandBadge: {
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.32)',
     borderRadius: radius.full,
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(125,196,190,0.28)',
   },
   brandBadgeText: {
     fontFamily: fonts.uiSemi,
@@ -382,9 +411,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.32)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -409,6 +438,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
     marginBottom: 6,
+    color: 'rgba(255,255,255,0.55)',
   },
   heroGreeting: {
     fontFamily: fonts.display,
@@ -416,6 +446,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     lineHeight: 40,
     marginBottom: 8,
+    color: '#fff',
   },
   nameEditRow: {
     flexDirection: 'row',
@@ -423,7 +454,40 @@ const styles = StyleSheet.create({
     gap: 6,
     alignSelf: 'flex-start',
   },
-  nameEditText: { fontFamily: fonts.uiSemi, fontSize: 13 },
+  nameEditText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 13,
+    color: 'rgba(125,196,190,0.9)',
+  },
+
+  // Floating orbs
+  ambientOrb1: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    top: -60,
+    left: -80,
+    opacity: 0.13,
+  },
+  ambientOrb2: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    bottom: 30,
+    right: -60,
+    opacity: 0.09,
+  },
+  ambientOrb3: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    top: HERO_H * 0.35,
+    left: '45%',
+    opacity: 0.07,
+  },
 
   // ── Welcome banner
   welcomeBanner: {
@@ -445,13 +509,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: spacing.lg,
   },
-  quoteAccentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-  },
+  quoteAccentBar: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
   bigQuoteMark: {
     position: 'absolute',
     top: spacing.md,
@@ -482,7 +540,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     marginBottom: spacing.lg,
   },
-  categoryChipText: { fontFamily: fonts.uiSemi, fontSize: 12, letterSpacing: 0.5, textTransform: 'capitalize' },
+  categoryChipText: {
+    fontFamily: fonts.uiSemi,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: 'capitalize',
+  },
   quoteActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -498,9 +561,7 @@ const styles = StyleSheet.create({
   nextQuoteText: { fontFamily: fonts.uiSemi, fontSize: 13, letterSpacing: 0.3 },
 
   // ── Quick actions
-  quickRow: {
-    gap: spacing.smd,
-  },
+  quickRow: { gap: spacing.smd },
   quickCard: {
     flexDirection: 'row',
     alignItems: 'center',
